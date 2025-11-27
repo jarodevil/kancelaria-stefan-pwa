@@ -17,13 +17,19 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
+    // Simplified login logic
     setTimeout(() => {
       setIsLoading(false);
-      toast.success("Zalogowano pomyślnie!");
-      // In a real app, you would redirect to the dashboard here
-      // setLocation('/dashboard'); 
-    }, 1500);
+      
+      if (password === 'xxxx') {
+        // Store email as context variable for Stefan
+        localStorage.setItem('userEmail', email);
+        toast.success("Dostęp przyznany. Witaj w systemie.");
+        setLocation('/chat');
+      } else {
+        toast.error("Błędne hasło dostępu. Wymagany kod autoryzacji.");
+      }
+    }, 1000);
   };
 
   return (
@@ -66,20 +72,21 @@ export default function Login() {
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Hasło</Label>
-                  <a href="#" className="text-xs text-primary hover:text-primary/80 transition-colors">Zapomniałeś hasła?</a>
+                  <Label htmlFor="password">Kod dostępu</Label>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input 
                     id="password" 
                     type="password" 
+                    placeholder="xxxx"
                     className="pl-9 bg-black/20 border-white/10 focus:border-primary/50 transition-colors"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                 </div>
+                <p className="text-[10px] text-muted-foreground text-right">Domyślny kod: xxxx</p>
               </div>
 
               <Button 
