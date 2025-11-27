@@ -24,8 +24,14 @@ export default function Login() {
       if (password === 'xxxx') {
         // Store email as context variable for Stefan
         localStorage.setItem('userEmail', email);
-        toast.success("Dostęp przyznany. Witaj w systemie.");
-        setLocation('/chat');
+        toast.success("Dostęp przyznany. Przekierowanie do kancelarii...");
+        
+        // Redirect to the main external application with email as context
+        const targetUrl = new URL('https://kancelaria-mefa9ha9.manus.space');
+        targetUrl.searchParams.append('context_email', email);
+        
+        // Use window.location.href for external redirect
+        window.location.href = targetUrl.toString();
       } else {
         toast.error("Błędne hasło dostępu. Wymagany kod autoryzacji.");
       }
