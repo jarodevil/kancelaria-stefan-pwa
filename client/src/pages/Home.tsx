@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Share2, Shield, Zap, Brain, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Download, Share2, Shield, Zap, Brain, CheckCircle, Lock, Mail, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -8,17 +10,30 @@ import { useLocation } from "wouter";
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
 
+  // Check for saved credentials and standalone mode on mount
   useEffect(() => {
+    const savedEmail = localStorage.getItem('userEmail');
+    const savedPassword = localStorage.getItem('userPassword'); // We store this locally to auto-login
+    
+    if (savedEmail) setEmail(savedEmail);
+    if (savedPassword) setPassword(savedPassword);
+
     // Check if running in standalone mode (installed)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
                          (window.navigator as any).standalone === true;
 
     if (isStandalone) {
       setIsInstalled(true);
-      // Automatically redirect to login if already installed and opened
-      setLocation('/login');
+      
+      // Auto-redirect if we have valid credentials saved
+      if (savedEmail && savedPassword === 'xxxx') {
+        handleRedirect(savedEmail);
+      }
     }
 
     const handleBeforeInstallPrompt = (e: any) => {
@@ -29,10 +44,10 @@ export default function Home() {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       toast.success("Aplikacja została zainstalowana!");
-      // Redirect to login shortly after installation
-      setTimeout(() => {
-        setLocation('/login');
-      }, 2000);
+      // If we have credentials, try to redirect (though usually browser closes/opens app)
+      if (email && password === 'xxxx') {
+         handleRedirect(email);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -42,26 +57,60 @@ export default function Home() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [setLocation]);
+  }, [email, password]);
 
-  const handleInstallClick = async () => {
-    if (isInstalled) {
-      // If already installed/detected, allow manual navigation to login
-      setLocation('/login');
-      return;
-    }
-
-    if (!deferredPrompt) {
-      toast.info("Aplikacja jest już zainstalowana lub Twoja przeglądarka nie wspiera automatycznej instalacji. Sprawdź menu przeglądarki.");
-      return;
-    }
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+  const handleRedirect = (userEmail: string) => {
+    setIsLoading(true);
+    toast.success("Weryfikacja pomyślna. Łączenie z kancelarią...");
     
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      // The appinstalled event will handle the redirect
+    // Redirect to the main external application with email as context
+    const targetUrl = new URL('https://kancelaria-mefa9ha9.manus.space');
+    targetUrl.searchParams.append('context_email', userEmail);
+    
+    // Use window.location.href for external redirect
+    setTimeout(() => {
+        window.location.href = targetUrl.toString();
+    }, 800); // Small delay for user to see the success message
+  };
+
+  const handleActionClick = async () => {
+    // 1. Validate Inputs
+    if (!email || !password) {
+      toast.error("Proszę podać email i kod dostępu.");
+      return;
+    }
+
+    if (password !== 'xxxx') {
+      toast.error("Błędny kod dostępu.");
+      return;
+    }
+
+    // 2. Save Credentials
+    localStorage.setItem('userEmail', email);
+    localStorage.setItem('userPassword', password);
+
+    // 3. If already installed, just redirect
+    if (isInstalled) {
+      handleRedirect(email);
+      return;
+    }
+
+    // 4. If not installed, try to install
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        // The appinstalled event will trigger, but we can also redirect here if needed
+        // However, usually the browser might close the tab or open the app.
+        // We'll let the standalone check handle the redirect when the app opens.
+        toast.success("Instalacja rozpoczęta. Otwórz aplikację, aby się połączyć.");
+      }
+    } else {
+      // Fallback if install prompt not available (e.g. already installed but not detected, or unsupported)
+      // Just redirect as a web user
+      handleRedirect(email);
     }
   };
 
@@ -96,7 +145,7 @@ export default function Home() {
         
         {/* Header / Logo Area */}
         <div className="text-center space-y-4 animate-in fade-in zoom-in duration-700">
-          <div className="relative w-32 h-32 mx-auto mb-6 group">
+          <div className="relative w-24 h-24 mx-auto mb-4 group">
             <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl group-hover:blur-2xl transition-all duration-500" />
             <img 
               src="/icon-192.png" 
@@ -105,10 +154,10 @@ export default function Home() {
             />
           </div>
           
-          <h1 className="text-4xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white via-primary-foreground to-white/80 glow-text">
+          <h1 className="text-3xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white via-primary-foreground to-white/80 glow-text">
             STEFAN
           </h1>
-          <p className="text-lg text-muted-foreground font-light tracking-wide">
+          <p className="text-sm text-muted-foreground font-light tracking-wide">
             Twój Asystent Prawny AI
           </p>
         </div>
@@ -116,60 +165,68 @@ export default function Home() {
         {/* Main Card */}
         <Card className="glass border-white/5 overflow-hidden backdrop-blur-xl">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl font-medium">Witaj w przyszłości prawa</CardTitle>
-            <CardDescription>Zainstaluj aplikację, aby mieć Stefana zawsze pod ręką.</CardDescription>
+            <CardTitle className="text-lg font-medium">Konfiguracja Dostępu</CardTitle>
+            <CardDescription>Wprowadź dane, aby połączyć się z kancelarią.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
+          <CardContent className="space-y-6 pt-4">
             
-            {/* Features Grid */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                <div className="p-2 rounded-md bg-primary/20 text-primary">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Błyskawiczne Analizy</h3>
-                  <p className="text-xs text-muted-foreground">Odpowiedzi w czasie rzeczywistym</p>
+            {/* Login Form */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="twoj@email.pl" 
+                    className="pl-9 bg-black/20 border-white/10 focus:border-primary/50 transition-colors"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
               </div>
               
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                <div className="p-2 rounded-md bg-secondary/20 text-secondary">
-                  <Shield className="w-5 h-5" />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Kod dostępu</Label>
                 </div>
-                <div>
-                  <h3 className="font-medium text-sm">Bezpieczeństwo Danych</h3>
-                  <p className="text-xs text-muted-foreground">Szyfrowanie klasy bankowej</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                <div className="p-2 rounded-md bg-accent/20 text-accent-foreground">
-                  <Brain className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-sm">Zaawansowane AI</h3>
-                  <p className="text-xs text-muted-foreground">Oparte na najnowszych modelach</p>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    placeholder="xxxx"
+                    className="pl-9 bg-black/20 border-white/10 focus:border-primary/50 transition-colors"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3 pt-4">
+            <div className="space-y-3 pt-2">
               <Button 
                 size="lg" 
                 className="w-full bg-primary hover:bg-primary/90 text-white font-bold shadow-[0_0_20px_-5px_var(--primary)] transition-all hover:scale-[1.02]"
-                onClick={handleInstallClick}
+                onClick={handleActionClick}
+                disabled={isLoading}
               >
-                {isInstalled ? (
+                {isLoading ? (
+                   <div className="flex items-center justify-center gap-2">
+                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     <span>Łączenie...</span>
+                   </div>
+                ) : isInstalled ? (
                   <>
                     <CheckCircle className="mr-2 h-5 w-5" />
-                    Otwórz Aplikację
+                    Połącz z Kancelarią
                   </>
                 ) : (
                   <>
                     <Download className="mr-2 h-5 w-5" />
-                    Zainstaluj Aplikację
+                    Zainstaluj i Połącz
                   </>
                 )}
               </Button>
@@ -191,7 +248,7 @@ export default function Home() {
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground/50">
           <p>KancelariAI © 2025. Wszystkie prawa zastrzeżone.</p>
-          <p className="mt-1">Działa w trybie offline • PWA Ready</p>
+          <p className="mt-1">PWA Ready • Auto-Login Enabled</p>
         </div>
 
       </main>
