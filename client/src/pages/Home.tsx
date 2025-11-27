@@ -3,29 +3,54 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Download, Share2, Shield, Zap, Brain, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
+    // Check if running in standalone mode (installed)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         (window.navigator as any).standalone === true;
+
+    if (isStandalone) {
+      setIsInstalled(true);
+      // Automatically redirect to login if already installed and opened
+      setLocation('/login');
+    }
+
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    const handleAppInstalled = () => {
       setIsInstalled(true);
-    }
+      toast.success("Aplikacja została zainstalowana!");
+      // Redirect to login shortly after installation
+      setTimeout(() => {
+        setLocation('/login');
+      }, 2000);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [setLocation]);
 
   const handleInstallClick = async () => {
+    if (isInstalled) {
+      // If already installed/detected, allow manual navigation to login
+      setLocation('/login');
+      return;
+    }
+
     if (!deferredPrompt) {
       toast.info("Aplikacja jest już zainstalowana lub Twoja przeglądarka nie wspiera automatycznej instalacji. Sprawdź menu przeglądarki.");
       return;
@@ -36,7 +61,7 @@ export default function Home() {
     
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
-      toast.success("Dziękujemy za zainstalowanie Stefana!");
+      // The appinstalled event will handle the redirect
     }
   };
 
@@ -135,12 +160,11 @@ export default function Home() {
                 size="lg" 
                 className="w-full bg-primary hover:bg-primary/90 text-white font-bold shadow-[0_0_20px_-5px_var(--primary)] transition-all hover:scale-[1.02]"
                 onClick={handleInstallClick}
-                disabled={isInstalled}
               >
                 {isInstalled ? (
                   <>
                     <CheckCircle className="mr-2 h-5 w-5" />
-                    Zainstalowano
+                    Otwórz Aplikację
                   </>
                 ) : (
                   <>
