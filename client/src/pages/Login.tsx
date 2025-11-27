@@ -17,25 +17,22 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simplified login logic
-    setTimeout(() => {
-      setIsLoading(false);
+    // Immediate check without artificial delay
+    if (password === 'xxxx') {
+      // Store email as context variable for Stefan
+      localStorage.setItem('userEmail', email);
+      toast.success("Dostęp przyznany. Przekierowanie do kancelarii...");
       
-      if (password === 'xxxx') {
-        // Store email as context variable for Stefan
-        localStorage.setItem('userEmail', email);
-        toast.success("Dostęp przyznany. Przekierowanie do kancelarii...");
-        
-        // Redirect to the main external application with email as context
-        const targetUrl = new URL('https://kancelaria-mefa9ha9.manus.space');
-        targetUrl.searchParams.append('context_email', email);
-        
-        // Use window.location.href for external redirect
-        window.location.href = targetUrl.toString();
-      } else {
-        toast.error("Błędne hasło dostępu. Wymagany kod autoryzacji.");
-      }
-    }, 1000);
+      // Redirect to the main external application with email as context
+      const targetUrl = new URL('https://kancelaria-mefa9ha9.manus.space');
+      targetUrl.searchParams.append('context_email', email);
+      
+      // Use window.location.href for external redirect
+      window.location.href = targetUrl.toString();
+    } else {
+      setIsLoading(false);
+      toast.error("Błędne hasło dostępu. Wymagany kod autoryzacji.");
+    }
   };
 
   return (
@@ -101,7 +98,10 @@ export default function Login() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  "Logowanie..."
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Przekierowywanie...</span>
+                  </div>
                 ) : (
                   <>
                     Zaloguj się <ArrowRight className="ml-2 h-4 w-4" />
