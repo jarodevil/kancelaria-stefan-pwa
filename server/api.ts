@@ -20,7 +20,7 @@ router.post("/chat", async (req, res) => {
     }));
 
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-pro",
       systemInstruction: "Jesteś Stefan, profesjonalny asystent prawny. Twoim celem jest udzielanie precyzyjnych, rzetelnych i pomocnych informacji z zakresu prawa. Odpowiadaj zawsze w języku polskim, używając profesjonalnego, ale zrozumiałego języka. Opieraj się na obowiązujących przepisach prawa, ale zawsze zaznaczaj, że Twoja porada nie zastępuje oficjalnej opinii prawnej adwokata lub radcy prawnego. Bądź uprzejmy, konkretny i skupiony na rozwiązywaniu problemów prawnych użytkownika."
     });
     
