@@ -22,6 +22,7 @@ async function startServer() {
   app.use("/api", apiRouter);
 
   // Handle client-side routing - serve index.html for all routes
+  // This is crucial for SPA routing to work correctly
   app.get("*", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));
   });
