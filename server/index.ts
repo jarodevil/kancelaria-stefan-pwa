@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer } from "http";
+import apiRouter from "./api";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -17,6 +18,8 @@ async function startServer() {
       : path.resolve(__dirname, "..", "dist", "public");
 
   app.use(express.static(staticPath));
+  app.use(express.json());
+  app.use("/api", apiRouter);
 
   // Handle client-side routing - serve index.html for all routes
   app.get("*", (_req, res) => {

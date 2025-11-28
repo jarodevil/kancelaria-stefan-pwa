@@ -12,15 +12,31 @@ interface Message {
 }
 
 export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem('stefan_chat_history');
+    if (saved) {
+      try {
+        return JSON.parse(saved).map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        }));
+      } catch (e) {
+        console.error("Failed to parse chat history", e);
+      }
+    }
+    return [{
       id: 1,
       text: "Dzień dobry. Jestem Stefan, Starszy Partner. W czym mogę pomóc? Proszę przedstawić problem w sposób zwięzły i rzeczowy.",
       sender: 'bot',
       timestamp: new Date()
-    }
-  ]);
+    }];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('stefan_chat_history', JSON.stringify(messages));
+  }, [messages]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,16 +59,38 @@ export default function Chat() {
     setMessages(prev => [...prev, newUserMessage]);
     setInputValue("");
 
-    // Simulate AI response
-    setTimeout(() => {
+    // Call Backend API
+    setIsLoading(true);
+    
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: inputValue,
+        history: messages // Send full history for context
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
       const botResponse: Message = {
-        id: messages.length + 2,
-        text: "Rozumiem. Analizuję przedstawioną sytuację w świetle obowiązujących przepisów. Proszę o chwilę cierpliwości...",
+        id: Date.now(),
+        text: data.text || "Przepraszam, wystąpił błąd połączenia z systemem.",
         sender: 'bot',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botResponse]);
-    }, 1500);
+    })
+    .catch(err => {
+      console.error(err);
+      const errorResponse: Message = {
+        id: Date.now(),
+        text: "Przepraszam, nie udało się połączyć z serwerem.",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    })
+    .finally(() => setIsLoading(false));
   };
 
   return (
@@ -114,7 +152,7 @@ export default function Chat() {
                 type="submit" 
                 size="icon"
                 className="absolute right-2 top-2 h-10 w-10 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isLoading}
               >
                 <Send className="w-4 h-4" />
               </Button>
