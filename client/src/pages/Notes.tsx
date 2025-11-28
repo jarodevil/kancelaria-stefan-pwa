@@ -58,7 +58,8 @@ export default function Notes() {
             : note
         )
       );
-      toast.success("Notatka zaktualizowana");
+      queueAction("note_update", { id: selectedNote.id, title, content });
+      toast.success(isOnline ? "Notatka zaktualizowana" : "Notatka zaktualizowana (offline)");
     } else {
       const newNote: Note = {
         id: Date.now().toString(),
@@ -68,7 +69,8 @@ export default function Notes() {
         updatedAt: new Date().toISOString(),
       };
       setNotes(prev => [newNote, ...prev]);
-      toast.success("Notatka utworzona");
+      queueAction("note_create", newNote);
+      toast.success(isOnline ? "Notatka utworzona" : "Notatka utworzona (offline)");
     }
 
     handleNewNote();
@@ -76,6 +78,7 @@ export default function Notes() {
 
   const handleDelete = (id: string) => {
     setNotes(prev => prev.filter(note => note.id !== id));
+    queueAction("note_delete", { id });
     if (selectedNote?.id === id) {
       handleNewNote();
     }
