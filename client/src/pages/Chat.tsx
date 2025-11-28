@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Send, Trash2, Scale, User } from "lucide-react";
+import { Loader2, Send, Trash2, Scale, User, Download, Archive } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
+import { loadChatHistory, saveMessage, exportChatArchive, needsArchiving, archiveOldMessages } from "@/lib/chatArchive";
 
 interface Message {
   role: "user" | "assistant";
@@ -20,24 +21,28 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Load chat history from localStorage
+  // Load chat history and check for archiving
   useEffect(() => {
-    const saved = localStorage.getItem("stefan_chat_history");
-    if (saved) {
-      try {
-        setMessages(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to load chat history", e);
-      }
+    const messages = loadChatHistory();
+    setMessages(messages);
+
+    // Check if archiving is needed
+    if (needsArchiving()) {
+      toast.info("Archiwizacja czatu", {
+        description: "Wykryto wiadomości starsze niż 30 dni. Czy chcesz je zarchiwizować?",
+        action: {
+          label: "Archiwizuj",
+          onClick: () => {
+            const result = archiveOldMessages();
+            toast.success(`Zarchiwizowano ${result.archived} wiadomości. Zachowano ${result.kept} najnowszych.`);
+            setMessages(loadChatHistory());
+          },
+        },
+      });
     }
   }, []);
 
-  // Save chat history to localStorage
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem("stefan_chat_history", JSON.stringify(messages));
-    }
-  }, [messages]);
+  // Messages are saved automatically by chatArchive utility
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -49,7 +54,9 @@ export default function Chat() {
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onSuccess: (data) => {
       if (data.success) {
-        setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+        const assistantMsg = { role: "assistant" as const, content: data.message };
+        setMessages(prev => [...prev, assistantMsg]);
+        saveMessage(assistantMsg);
       } else {
         toast.error("Błąd", { description: data.message });
       }
@@ -64,7 +71,9 @@ export default function Chat() {
 
     const userMessage = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    const userMsg = { role: "user" as const, content: userMessage };
+    setMessages(prev => [...prev, userMsg]);
+    saveMessage(userMsg);
 
     // Filter history to only include valid messages with role and content
     const validHistory = messages.filter(
@@ -81,6 +90,11 @@ export default function Chat() {
     setMessages([]);
     localStorage.removeItem("stefan_chat_history");
     toast.success("Historia czatu została wyczyszczona");
+  };
+
+  const handleExport = () => {
+    exportChatArchive();
+    toast.success("Eksportowano historię czatu");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -102,10 +116,16 @@ export default function Chat() {
             </p>
           </div>
           {messages.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleClear}>
-              <Trash2 className="w-4 h-4 mr-2" />
-              Wyczyść
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="w-4 h-4 mr-2" />
+                Eksportuj
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClear}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Wyczyść
+              </Button>
+            </div>
           )}
         </div>
 
