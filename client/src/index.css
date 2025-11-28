@@ -50,46 +50,44 @@
 
 /* Default to Dark Mode for "Future Law" theme */
 :root {
-  /* True Black Background */
-  --background: oklch(0.1 0 0); 
-  --foreground: oklch(0.95 0 0);
+  /* Light Mode Defaults (High Contrast, Easy on Eyes) */
+  --background: oklch(0.98 0 0); 
+  --foreground: oklch(0.15 0 0);
 
-  /* Glassmorphism Card */
-  --card: oklch(0.15 0 0 / 0.6);
-  --card-foreground: oklch(0.95 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
 
-  --popover: oklch(0.12 0 0);
-  --popover-foreground: oklch(0.95 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0 0);
 
-  /* Electric Blue/Purple */
-  --primary: oklch(0.6 0.22 270); 
+  /* Professional Blue (Less Neon) */
+  --primary: oklch(0.45 0.15 260); 
   --primary-foreground: oklch(1 0 0);
 
-  /* Neon Green Accent */
-  --secondary: oklch(0.85 0.25 145);
-  --secondary-foreground: oklch(0.1 0 0);
+  --secondary: oklch(0.95 0.05 260);
+  --secondary-foreground: oklch(0.2 0.1 260);
 
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.7 0 0);
+  --muted: oklch(0.95 0 0);
+  --muted-foreground: oklch(0.4 0 0);
 
-  --accent: oklch(0.25 0.05 270);
-  --accent-foreground: oklch(0.95 0 0);
+  --accent: oklch(0.95 0.05 260);
+  --accent-foreground: oklch(0.2 0.1 260);
 
   --destructive: oklch(0.6 0.2 25);
   --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(0.3 0 0);
-  --input: oklch(0.3 0 0);
-  --ring: oklch(0.6 0.22 270);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+  --ring: oklch(0.45 0.15 260);
 
-  --radius: 0.25rem; /* Sharper corners for high-tech feel */
+  --radius: 0.5rem;
 
-  /* Chart colors for data viz */
-  --chart-1: oklch(0.6 0.22 270); /* Electric Purple */
-  --chart-2: oklch(0.7 0.18 240); /* Blue */
-  --chart-3: oklch(0.85 0.25 145); /* Neon Green */
-  --chart-4: oklch(0.7 0.2 320); /* Magenta */
-  --chart-5: oklch(0.8 0.15 200); /* Cyan */
+  /* Chart colors */
+  --chart-1: oklch(0.45 0.15 260);
+  --chart-2: oklch(0.5 0.15 240);
+  --chart-3: oklch(0.4 0.15 150);
+  --chart-4: oklch(0.6 0.15 300);
+  --chart-5: oklch(0.5 0.15 200);
 }
 
 .dark {

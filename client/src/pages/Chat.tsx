@@ -5,6 +5,7 @@ import { Send, History, LogOut, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 declare global {
   interface Window {
@@ -189,23 +190,24 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
       <Sidebar />
       
       <div className="flex-1 flex flex-col relative">
         {/* Top Bar */}
-        <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#0a0a0a]">
+        <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm">
           <div>
-            <h1 className="text-lg font-medium text-white">Chat z Ekspertem</h1>
-            <p className="text-xs text-gray-500">Stefan - Starszy Partner (v1.5)</p>
+            <h1 className="text-lg font-medium text-foreground">Chat z Ekspertem</h1>
+            <p className="text-xs text-muted-foreground">Stefan - Starszy Partner (v1.5)</p>
           </div>
           
-          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={handleHistoryClick}
-              className="text-gray-400 hover:text-white gap-2 border border-white/10 h-8"
+              className="text-muted-foreground hover:text-foreground gap-2 border border-border h-8"
             >
               <History className="w-3 h-3" />
               Historia
@@ -220,7 +222,7 @@ export default function Chat() {
               variant="ghost" 
               size="icon" 
               onClick={handleLogout}
-              className="text-gray-400 hover:text-red-400 h-8 w-8 ml-2"
+              className="text-muted-foreground hover:text-destructive h-8 w-8 ml-2"
               title="Wyloguj się"
             >
               <LogOut className="w-4 h-4" />
@@ -238,8 +240,8 @@ export default function Chat() {
               >
                 <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
                   msg.sender === 'user'
-                    ? 'bg-orange-600 text-white rounded-tr-sm'
-                    : 'bg-[#1a1a1a] border border-white/5 text-gray-300 rounded-tl-sm'
+                    ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                    : 'bg-card border border-border text-card-foreground rounded-tl-sm shadow-sm'
                 }`}>
                   {msg.text}
                 </div>
@@ -250,14 +252,14 @@ export default function Chat() {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="p-6 bg-[#0a0a0a] border-t border-white/10">
+        <div className="p-6 bg-background border-t border-border">
           <div className="max-w-3xl mx-auto relative">
             <form onSubmit={handleSendMessage}>
               <input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Wpisz wiadomość..."
-                className="w-full bg-[#151515] border border-white/10 rounded-xl py-4 pl-5 pr-14 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-500/50 transition-colors"
+                className="w-full bg-input/50 border border-input rounded-xl py-4 pl-5 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
               />
               {isLoading ? (
                 <Button 
