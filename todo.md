@@ -49,4 +49,7 @@
 ## Documentation & Publication
 - [x] Create comprehensive user documentation PDF
 - [x] Add Help section to application
-- [ ] Publish PWA project
+- [x] Publish PWA project
+
+## Bugs to Fix
+- [x] Chat API connection broken - no response from AI (rolling back to simple working version)
