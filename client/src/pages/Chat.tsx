@@ -6,6 +6,12 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
+declare global {
+  interface Window {
+    hasRetried?: boolean;
+  }
+}
+
 interface Message {
   id: number;
   text: string;
@@ -150,11 +156,23 @@ export default function Chat() {
       let errorMessage = "Przepraszam, wystąpił nieoczekiwany błąd. Spróbuj ponownie.";
       
       if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+        // Auto-retry logic (Simple 1-time retry)
+        if (!window.hasRetried) {
+           window.hasRetried = true;
+           console.log("Retrying connection in 3s...");
+           toast.loading("Słabe połączenie. Ponawiam próbę...");
+           
+           setTimeout(() => {
+             handleSendMessage(e); // Retry the same event
+           }, 3000);
+           return;
+        }
         errorMessage = "Błąd połączenia. Sprawdź internet i spróbuj ponownie.";
       } else if (err.message.includes("500")) {
         errorMessage = "Serwer jest chwilowo niedostępny. Spróbuj za chwilę.";
       }
 
+      window.hasRetried = false; // Reset retry flag after failure
       const errorResponse: Message = {
         id: Date.now(),
         text: errorMessage,
