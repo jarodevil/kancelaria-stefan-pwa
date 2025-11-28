@@ -8,10 +8,14 @@ import {
   FileCheck, 
   StickyNote, 
   BookOpen,
-  Scale
+  Scale,
+  Info,
+  Sun,
+  Moon,
+  Settings as SettingsIcon
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 
 interface StefanLayoutProps {
   children: ReactNode;
@@ -19,6 +23,22 @@ interface StefanLayoutProps {
 
 export default function StefanLayout({ children }: StefanLayoutProps) {
   const [location] = useLocation();
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("stefan_theme") as "light" | "dark" | null;
+    if (saved) {
+      setTheme(saved);
+      document.documentElement.classList.toggle("dark", saved === "dark");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("stefan_theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  };
 
   const navItems = [
     { path: "/", icon: Home, label: "Strona główna" },
@@ -27,6 +47,8 @@ export default function StefanLayout({ children }: StefanLayoutProps) {
     { path: "/templates", icon: FileText, label: "Szablony Pism" },
     { path: "/notes", icon: StickyNote, label: "Moje Notatki" },
     { path: "/knowledge", icon: BookOpen, label: "Baza Wiedzy" },
+    { path: "/settings", icon: SettingsIcon, label: "Ustawienia" },
+    { path: "/about", icon: Info, label: "O Systemie" },
   ];
 
   return (
@@ -71,7 +93,16 @@ export default function StefanLayout({ children }: StefanLayoutProps) {
         <Separator />
 
         {/* Footer */}
-        <div className="p-4">
+        <div className="p-4 space-y-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleTheme}
+            className="w-full gap-2"
+          >
+            {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            {theme === "light" ? "Tryb ciemny" : "Tryb jasny"}
+          </Button>
           <p className="text-xs text-muted-foreground text-center">
             System Stefan v2.0
             <br />

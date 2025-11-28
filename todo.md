@@ -27,3 +27,10 @@
 
 ## Bugs to Fix
 - [x] Chat validation error - history format incorrect (role/content mismatch)
+
+## Missing Features to Restore
+- [x] About page (O Systemie) with RODO, copyright, Manus credits
+- [x] Theme toggle (dark/light mode switcher)
+- [x] Access control (email + code, max 5 users)
+- [x] PWA install link for external devices
+- [x] RSS feed for legal news updates

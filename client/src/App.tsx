@@ -10,6 +10,8 @@ import Analysis from "./pages/Analysis";
 import Templates from "./pages/Templates";
 import Notes from "./pages/Notes";
 import Knowledge from "./pages/Knowledge";
+import About from "./pages/About";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -20,6 +22,8 @@ function Router() {
       <Route path={"/templates"} component={Templates} />
       <Route path={"/notes"} component={Notes} />
       <Route path={"/knowledge"} component={Knowledge} />
+      <Route path={"/settings"} component={Settings} />
+      <Route path={"/about"} component={About} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
