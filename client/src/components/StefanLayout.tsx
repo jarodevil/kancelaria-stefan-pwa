@@ -10,6 +10,7 @@ import {
   BookOpen,
   Scale,
   Info,
+  HelpCircle,
   Sun,
   Moon,
   Settings as SettingsIcon
@@ -48,6 +49,7 @@ export default function StefanLayout({ children }: StefanLayoutProps) {
     { path: "/notes", icon: StickyNote, label: "Moje Notatki" },
     { path: "/knowledge", icon: BookOpen, label: "Baza Wiedzy" },
     { path: "/settings", icon: SettingsIcon, label: "Ustawienia" },
+    { path: "/help", icon: HelpCircle, label: "Pomoc" },
     { path: "/about", icon: Info, label: "O Systemie" },
   ];
 

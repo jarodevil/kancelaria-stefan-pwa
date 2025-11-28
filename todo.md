@@ -45,3 +45,8 @@
 - [x] Offline indicator UI
 - [x] Background sync queue for pending actions
 - [x] Offline access to notes and templates
+
+## Documentation & Publication
+- [x] Create comprehensive user documentation PDF
+- [x] Add Help section to application
+- [ ] Publish PWA project

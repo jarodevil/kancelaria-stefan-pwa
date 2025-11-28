@@ -11,7 +11,8 @@ import Analysis from "./pages/Analysis";
 import Templates from "./pages/Templates";
 import Notes from "./pages/Notes";
 import Knowledge from "./pages/Knowledge";
-import About from "./pages/About";
+import About from "@/pages/About";
+import Help from "@/pages/Help";
 import Settings from "./pages/Settings";
 
 function Router() {
@@ -24,7 +25,8 @@ function Router() {
       <Route path={"/notes"} component={Notes} />
       <Route path={"/knowledge"} component={Knowledge} />
       <Route path={"/settings"} component={Settings} />
-      <Route path={"/about"} component={About} />
+        <Route path="/about" component={About} />
+        <Route path="/help" component={Help} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
