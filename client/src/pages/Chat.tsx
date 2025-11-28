@@ -65,9 +65,14 @@ export default function Chat() {
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
 
+    // Filter history to only include valid messages with role and content
+    const validHistory = messages.filter(
+      msg => msg.role && msg.content && (msg.role === "user" || msg.role === "assistant")
+    );
+
     sendMessageMutation.mutate({
       message: userMessage,
-      history: messages,
+      history: validHistory,
     });
   };
 

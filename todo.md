@@ -24,3 +24,6 @@
 - [x] Error handling with user-friendly messages
 - [x] Empty states for lists
 - [x] Toast notifications for actions
+
+## Bugs to Fix
+- [x] Chat validation error - history format incorrect (role/content mismatch)
