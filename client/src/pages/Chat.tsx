@@ -1,293 +1,194 @@
-import { Sidebar } from "@/components/Sidebar";
+import StefanLayout from "@/components/StefanLayout";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, History, LogOut, Square } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { Loader2, Send, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Streamdown } from "streamdown";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/theme-toggle";
-
-declare global {
-  interface Window {
-    hasRetried?: boolean;
-  }
-}
 
 interface Message {
-  id: number;
-  text: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
+  role: "user" | "assistant";
+  content: string;
 }
 
 export default function Chat() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    const email = localStorage.getItem('userEmail');
-    setUserEmail(email);
-  }, []);
-
-  const getStorageKey = (email: string | null) => `stefan_chat_history_${email || 'guest'}`;
-
   const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Load messages once email is determined
+  // Load chat history from localStorage
   useEffect(() => {
-    const email = localStorage.getItem('userEmail');
-    const key = getStorageKey(email);
-    const saved = localStorage.getItem(key);
-    
+    const saved = localStorage.getItem("stefan_chat_history");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved).map((m: any) => ({
-          ...m,
-          timestamp: new Date(m.timestamp)
-        }));
-        setMessages(parsed);
+        setMessages(JSON.parse(saved));
       } catch (e) {
-        console.error("Failed to parse chat history", e);
-        setMessages([{
-          id: 1,
-          text: "Dzień dobry. Jestem Stefan, Starszy Partner. W czym mogę pomóc? Proszę przedstawić problem w sposób zwięzły i rzeczowy.",
-          sender: 'bot',
-          timestamp: new Date()
-        }]);
+        console.error("Failed to load chat history", e);
       }
-    } else {
-      setMessages([{
-        id: 1,
-        text: "Dzień dobry. Jestem Stefan, Starszy Partner. W czym mogę pomóc? Proszę przedstawić problem w sposób zwięzły i rzeczowy.",
-        sender: 'bot',
-        timestamp: new Date()
-      }]);
     }
   }, []);
 
-  // Save messages whenever they change
+  // Save chat history to localStorage
   useEffect(() => {
-    const email = localStorage.getItem('userEmail');
-    const key = getStorageKey(email);
     if (messages.length > 0) {
-      localStorage.setItem(key, JSON.stringify(messages));
+      localStorage.setItem("stefan_chat_history", JSON.stringify(messages));
     }
   }, [messages]);
-  const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [, setLocation] = useLocation();
-  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const handleStopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsLoading(false);
-      toast.info("Generowanie zatrzymane.");
-    }
-  };
-
-  const handleLogout = () => {
-    // We do NOT clear history on logout, so it persists for the user
-    // localStorage.removeItem(getStorageKey(userEmail)); 
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPassword');
-    setLocation('/');
-    toast.success("Wylogowano pomyślnie");
-  };
-
-  const handleHistoryClick = () => {
-    toast.info("Historia rozmów jest zapisywana lokalnie w Twojej przeglądarce.");
-  };
-
+  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: "smooth" });
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-
-    const newUserMessage: Message = {
-      id: messages.length + 1,
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, newUserMessage]);
-    setInputValue("");
-
-    // Call Backend API
-    setIsLoading(true);
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        message: inputValue,
-        history: messages // Send full history for context
-      }),
-      signal: controller.signal
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        throw new Error(data.error);
+  const sendMessageMutation = trpc.chat.sendMessage.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        setMessages(prev => [...prev, { role: "assistant", content: data.message }]);
+      } else {
+        toast.error("Błąd", { description: data.message });
       }
-      const botResponse: Message = {
-        id: Date.now(),
-        text: data.text || "Przepraszam, wystąpił błąd połączenia z systemem.",
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botResponse]);
-    })
-    .catch(err => {
-      if (err.name === 'AbortError') {
-        console.log('Fetch aborted');
-        return;
-      }
-      console.error("Chat Error:", err);
-      
-      let errorMessage = "Przepraszam, wystąpił nieoczekiwany błąd. Spróbuj ponownie.";
-      
-      if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
-        // Auto-retry logic (Simple 1-time retry)
-        if (!window.hasRetried) {
-           window.hasRetried = true;
-           console.log("Retrying connection in 3s...");
-           toast.loading("Słabe połączenie. Ponawiam próbę...");
-           
-           setTimeout(() => {
-             handleSendMessage(e); // Retry the same event
-           }, 3000);
-           return;
-        }
-        errorMessage = "Błąd połączenia. Sprawdź internet i spróbuj ponownie.";
-      } else if (err.message.includes("500")) {
-        errorMessage = "Serwer jest chwilowo niedostępny. Spróbuj za chwilę.";
-      }
+    },
+    onError: (error) => {
+      toast.error("Błąd połączenia", { description: error.message });
+    },
+  });
 
-      window.hasRetried = false; // Reset retry flag after failure
-      const errorResponse: Message = {
-        id: Date.now(),
-        text: errorMessage,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorResponse]);
-      toast.error("Wystąpił błąd komunikacji");
-    })
-    .finally(() => {
-      setIsLoading(false);
-      abortControllerRef.current = null;
+  const handleSend = () => {
+    if (!input.trim() || sendMessageMutation.isPending) return;
+
+    const userMessage = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+
+    sendMessageMutation.mutate({
+      message: userMessage,
+      history: messages,
     });
   };
 
+  const handleClear = () => {
+    setMessages([]);
+    localStorage.removeItem("stefan_chat_history");
+    toast.success("Historia czatu została wyczyszczona");
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col relative">
-        {/* Top Bar */}
-        <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card/50 backdrop-blur-sm">
+    <StefanLayout>
+      <div className="flex flex-col h-screen">
+        {/* Header */}
+        <div className="border-b p-4 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-medium text-foreground">Chat z Ekspertem</h1>
-            <p className="text-xs text-muted-foreground">Stefan - Starszy Partner (v1.5)</p>
+            <h1 className="text-2xl font-bold">Chat z Ekspertem</h1>
+            <p className="text-sm text-muted-foreground">
+              Zadaj pytanie prawne i otrzymaj natychmiastową odpowiedź
+            </p>
           </div>
-          
-            <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleHistoryClick}
-              className="text-muted-foreground hover:text-foreground gap-2 border border-border h-8"
-            >
-              <History className="w-3 h-3" />
-              Historia
+          {messages.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleClear}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Wyczyść historię
             </Button>
-            
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] font-medium text-green-500 tracking-wide">ONLINE</span>
-            </div>
+          )}
+        </div>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout}
-              className="text-muted-foreground hover:text-destructive h-8 w-8 ml-2"
-              title="Wyloguj się"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
-        </header>
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="max-w-4xl mx-auto space-y-4">
+            {messages.length === 0 && (
+              <Card className="bg-muted/50">
+                <CardHeader>
+                  <CardTitle>Witaj w Czacie z Ekspertem!</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-muted-foreground">
+                  <p>Jestem Stefan, Twój osobisty asystent prawny. Mogę pomóc Ci w:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Wyjaśnianiu przepisów prawnych</li>
+                    <li>Interpretacji dokumentów</li>
+                    <li>Udzielaniu porad w sprawach cywilnych i gospodarczych</li>
+                    <li>Odpowiadaniu na pytania dotyczące prawa pracy</li>
+                  </ul>
+                  <p className="text-sm pt-2">
+                    <strong>Pamiętaj:</strong> Moje odpowiedzi nie zastępują profesjonalnej porady prawnej.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Chat Area */}
-        <ScrollArea className="flex-1 p-6">
-          <div className="max-w-3xl mx-auto space-y-8">
-            {messages.map((msg) => (
+            {messages.map((msg, idx) => (
               <div
-                key={msg.id}
-                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                key={idx}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
-                  msg.sender === 'user'
-                    ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                    : 'bg-card border border-border text-card-foreground rounded-tl-sm shadow-sm'
-                }`}>
-                  {msg.text}
-                </div>
+                <Card
+                  className={`max-w-[80%] ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card"
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    {msg.role === "assistant" ? (
+                      <Streamdown>{msg.content}</Streamdown>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             ))}
-            <div ref={scrollRef} />
+
+            {sendMessageMutation.isPending && (
+              <div className="flex justify-start">
+                <Card className="bg-card">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-muted-foreground">Stefan pisze...</span>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
-        {/* Input Area */}
-        <div className="p-6 bg-background border-t border-border">
-          <div className="max-w-3xl mx-auto relative">
-            <form onSubmit={handleSendMessage}>
-              <input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Wpisz wiadomość..."
-                className="w-full bg-input/50 border border-input rounded-xl py-4 pl-5 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-              />
-              {isLoading ? (
-                <Button 
-                  type="button"
-                  size="icon"
-                  onClick={handleStopGeneration}
-                  className="absolute right-2 top-2 h-10 w-10 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors animate-pulse"
-                  title="Zatrzymaj generowanie"
-                >
-                  <Square className="w-4 h-4 fill-current" />
-                </Button>
+        {/* Input */}
+        <div className="border-t p-4">
+          <div className="max-w-4xl mx-auto flex gap-2">
+            <Input
+              placeholder="Wpisz swoje pytanie prawne..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              disabled={sendMessageMutation.isPending}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || sendMessageMutation.isPending}
+            >
+              {sendMessageMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Button 
-                  type="submit" 
-                  size="icon"
-                  className="absolute right-2 top-2 h-10 w-10 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors"
-                  disabled={!inputValue.trim()}
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Wyślij
+                </>
               )}
-            </form>
-            <p className="text-center text-[10px] text-gray-600 mt-3">
-              Analiza nie stanowi porady prawnej. W sprawach wymagających wiążącej opinii skonsultuj się z uprawnionym doradcą.
-            </p>
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </StefanLayout>
   );
 }
