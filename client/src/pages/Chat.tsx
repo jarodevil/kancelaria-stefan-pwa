@@ -1,8 +1,10 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, History, MoreVertical } from "lucide-react";
+import { Send, History, LogOut } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 interface Message {
   id: number;
@@ -38,6 +40,17 @@ export default function Chat() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [, setLocation] = useLocation();
+
+  const handleLogout = () => {
+    localStorage.removeItem('stefan_chat_history'); // Optional: clear history on logout
+    setLocation('/');
+    toast.success("Wylogowano pomyślnie");
+  };
+
+  const handleHistoryClick = () => {
+    toast.info("Historia rozmów jest zapisywana lokalnie w Twojej przeglądarce.");
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -106,14 +119,30 @@ export default function Chat() {
           </div>
           
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-2 border border-white/10 h-8">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleHistoryClick}
+              className="text-gray-400 hover:text-white gap-2 border border-white/10 h-8"
+            >
               <History className="w-3 h-3" />
-              Historia (30 dni)
+              Historia
             </Button>
+            
             <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               <span className="text-[10px] font-medium text-green-500 tracking-wide">ONLINE</span>
             </div>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-red-400 h-8 w-8 ml-2"
+              title="Wyloguj się"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </header>
 
