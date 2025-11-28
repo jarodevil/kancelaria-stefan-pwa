@@ -1,7 +1,7 @@
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, History, LogOut } from "lucide-react";
+import { Send, History, LogOut, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -14,36 +14,77 @@ interface Message {
 }
 
 export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem('stefan_chat_history');
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const email = localStorage.getItem('userEmail');
+    setUserEmail(email);
+  }, []);
+
+  const getStorageKey = (email: string | null) => `stefan_chat_history_${email || 'guest'}`;
+
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  // Load messages once email is determined
+  useEffect(() => {
+    const email = localStorage.getItem('userEmail');
+    const key = getStorageKey(email);
+    const saved = localStorage.getItem(key);
+    
     if (saved) {
       try {
-        return JSON.parse(saved).map((m: any) => ({
+        const parsed = JSON.parse(saved).map((m: any) => ({
           ...m,
           timestamp: new Date(m.timestamp)
         }));
+        setMessages(parsed);
       } catch (e) {
         console.error("Failed to parse chat history", e);
+        setMessages([{
+          id: 1,
+          text: "Dzień dobry. Jestem Stefan, Starszy Partner. W czym mogę pomóc? Proszę przedstawić problem w sposób zwięzły i rzeczowy.",
+          sender: 'bot',
+          timestamp: new Date()
+        }]);
       }
+    } else {
+      setMessages([{
+        id: 1,
+        text: "Dzień dobry. Jestem Stefan, Starszy Partner. W czym mogę pomóc? Proszę przedstawić problem w sposób zwięzły i rzeczowy.",
+        sender: 'bot',
+        timestamp: new Date()
+      }]);
     }
-    return [{
-      id: 1,
-      text: "Dzień dobry. Jestem Stefan, Starszy Partner. W czym mogę pomóc? Proszę przedstawić problem w sposób zwięzły i rzeczowy.",
-      sender: 'bot',
-      timestamp: new Date()
-    }];
-  });
+  }, []);
 
+  // Save messages whenever they change
   useEffect(() => {
-    localStorage.setItem('stefan_chat_history', JSON.stringify(messages));
+    const email = localStorage.getItem('userEmail');
+    const key = getStorageKey(email);
+    if (messages.length > 0) {
+      localStorage.setItem(key, JSON.stringify(messages));
+    }
   }, [messages]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+      toast.info("Generowanie zatrzymane.");
+    }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('stefan_chat_history'); // Optional: clear history on logout
+    // We do NOT clear history on logout, so it persists for the user
+    // localStorage.removeItem(getStorageKey(userEmail)); 
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userPassword');
     setLocation('/');
     toast.success("Wylogowano pomyślnie");
   };
@@ -74,6 +115,8 @@ export default function Chat() {
 
     // Call Backend API
     setIsLoading(true);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     
     fetch('/api/chat', {
       method: 'POST',
@@ -81,7 +124,8 @@ export default function Chat() {
       body: JSON.stringify({ 
         message: inputValue,
         history: messages // Send full history for context
-      })
+      }),
+      signal: controller.signal
     })
     .then(res => res.json())
     .then(data => {
@@ -94,6 +138,10 @@ export default function Chat() {
       setMessages(prev => [...prev, botResponse]);
     })
     .catch(err => {
+      if (err.name === 'AbortError') {
+        console.log('Fetch aborted');
+        return;
+      }
       console.error(err);
       const errorResponse: Message = {
         id: Date.now(),
@@ -103,7 +151,10 @@ export default function Chat() {
       };
       setMessages(prev => [...prev, errorResponse]);
     })
-    .finally(() => setIsLoading(false));
+    .finally(() => {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    });
   };
 
   return (
@@ -177,14 +228,26 @@ export default function Chat() {
                 placeholder="Wpisz wiadomość..."
                 className="w-full bg-[#151515] border border-white/10 rounded-xl py-4 pl-5 pr-14 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-500/50 transition-colors"
               />
-              <Button 
-                type="submit" 
-                size="icon"
-                className="absolute right-2 top-2 h-10 w-10 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors"
-                disabled={!inputValue.trim() || isLoading}
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+              {isLoading ? (
+                <Button 
+                  type="button"
+                  size="icon"
+                  onClick={handleStopGeneration}
+                  className="absolute right-2 top-2 h-10 w-10 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors animate-pulse"
+                  title="Zatrzymaj generowanie"
+                >
+                  <Square className="w-4 h-4 fill-current" />
+                </Button>
+              ) : (
+                <Button 
+                  type="submit" 
+                  size="icon"
+                  className="absolute right-2 top-2 h-10 w-10 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors"
+                  disabled={!inputValue.trim()}
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              )}
             </form>
             <p className="text-center text-[10px] text-gray-600 mt-3">
               Analiza nie stanowi porady prawnej. W sprawach wymagających wiążącej opinii skonsultuj się z uprawnionym doradcą.
