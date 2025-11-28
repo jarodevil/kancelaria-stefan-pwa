@@ -54,4 +54,44 @@ Bądź uprzejmy, konkretny i skupiony na rozwiązywaniu problemów prawnych uży
   }
 });
 
+router.post("/analyze", async (req, res) => {
+  try {
+    const { text } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ error: "No text provided for analysis" });
+    }
+
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
+      systemInstruction: `Jesteś Stefan, profesjonalny asystent prawny specjalizujący się w analizie umów i dokumentów prawnych.
+
+TWOJE ZADANIE:
+Przeprowadź szczegółową analizę przesłanego tekstu dokumentu prawnego.
+
+STRUKTURA ODPOWIEDZI (użyj Markdown):
+1. **Podsumowanie:** Krótki opis, czego dotyczy dokument.
+2. **Kluczowe Ryzyka:** Wypunktuj potencjalne zagrożenia dla klienta (np. kary umowne, niekorzystne terminy, brak zabezpieczeń). Oznacz je ikonami ⚠️.
+3. **Klauzule Niedozwolone (Abuzywne):** Jeśli wykryjesz zapisy niezgodne z prawem konsumenckim lub rażąco naruszające interesy, wskaż je wyraźnie.
+4. **Braki Formalne:** Czego brakuje w dokumencie (np. daty, podpisów, precyzyjnego określenia stron).
+5. **Rekomendacje:** Konkretne sugestie zmian w treści.
+
+ZASADY:
+- Bądź skrupulatny i krytyczny.
+- Cytuj fragmenty dokumentu, do których się odnosisz.
+- Używaj prostego, zrozumiałego języka, tłumacząc prawniczy żargon.
+- Pamiętaj o aktualnym stanie prawnym (Polska, ${new Date().getFullYear()}).`
+    });
+
+    const result = await model.generateContent(`Przeanalizuj poniższy dokument prawny:\n\n${text}`);
+    const response = await result.response;
+    const analysis = response.text();
+
+    res.json({ analysis });
+  } catch (error) {
+    console.error("Error analyzing document:", error);
+    res.status(500).json({ error: "Failed to analyze document" });
+  }
+});
+
 export default router;
