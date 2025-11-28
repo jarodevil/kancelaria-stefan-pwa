@@ -244,7 +244,7 @@ export default function Home() {
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground/50">
           <p>KancelariAI © 2025. Wszystkie prawa zastrzeżone.</p>
-          <p className="mt-1">PWA Ready • Auto-Login Enabled</p>
+          <p className="mt-1">PWA Ready • Auto-Login Enabled • v1.5</p>
         </div>
 
       </main>

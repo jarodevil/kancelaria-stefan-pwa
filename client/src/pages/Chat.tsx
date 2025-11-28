@@ -197,7 +197,7 @@ export default function Chat() {
         <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#0a0a0a]">
           <div>
             <h1 className="text-lg font-medium text-white">Chat z Ekspertem</h1>
-            <p className="text-xs text-gray-500">Stefan - Starszy Partner</p>
+            <p className="text-xs text-gray-500">Stefan - Starszy Partner (v1.5)</p>
           </div>
           
           <div className="flex items-center gap-4">
