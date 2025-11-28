@@ -63,14 +63,10 @@ export default function Home() {
     setIsLoading(true);
     toast.success("Weryfikacja pomyślna. Łączenie z kancelarią...");
     
-    // Redirect to the main external application with email as context
-    const targetUrl = new URL('https://kancelaria-mefa9ha9.manus.space');
-    targetUrl.searchParams.append('context_email', userEmail);
-    
-    // Use window.location.href for external redirect
+    // Redirect to internal chat
     setTimeout(() => {
-        window.location.href = targetUrl.toString();
-    }, 800); // Small delay for user to see the success message
+        setLocation('/chat');
+    }, 800);
   };
 
   const handleActionClick = async () => {
