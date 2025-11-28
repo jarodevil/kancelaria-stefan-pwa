@@ -129,6 +129,9 @@ export default function Chat() {
     })
     .then(res => res.json())
     .then(data => {
+      if (data.error) {
+        throw new Error(data.error);
+      }
       const botResponse: Message = {
         id: Date.now(),
         text: data.text || "Przepraszam, wystąpił błąd połączenia z systemem.",
@@ -142,14 +145,24 @@ export default function Chat() {
         console.log('Fetch aborted');
         return;
       }
-      console.error(err);
+      console.error("Chat Error:", err);
+      
+      let errorMessage = "Przepraszam, wystąpił nieoczekiwany błąd. Spróbuj ponownie.";
+      
+      if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+        errorMessage = "Błąd połączenia. Sprawdź internet i spróbuj ponownie.";
+      } else if (err.message.includes("500")) {
+        errorMessage = "Serwer jest chwilowo niedostępny. Spróbuj za chwilę.";
+      }
+
       const errorResponse: Message = {
         id: Date.now(),
-        text: "Przepraszam, nie udało się połączyć z serwerem.",
+        text: errorMessage,
         sender: 'bot',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorResponse]);
+      toast.error("Wystąpił błąd komunikacji");
     })
     .finally(() => {
       setIsLoading(false);
