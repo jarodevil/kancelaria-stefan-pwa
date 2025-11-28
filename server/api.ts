@@ -5,7 +5,8 @@ const router = express.Router();
 
 // Initialize Gemini with the provided key
 // In a real production env, this should be in process.env, but for this fix we use it directly as requested
-const genAI = new GoogleGenerativeAI("AIzaSyCHoAefaJI2U-zsaPcxS2TO6T-sIlVENGE");
+const apiKey = process.env.GEMINI_API_KEY || "AIzaSyCHoAefaJI2U-zsaPcxS2TO6T-sIlVENGE";
+const genAI = new GoogleGenerativeAI(apiKey);
 
 router.post("/chat", async (req, res) => {
   try {
@@ -19,12 +20,15 @@ router.post("/chat", async (req, res) => {
       parts: [{ text: msg.text }]
     }));
 
+    // Calculate current date dynamically for each request
+    const currentDate = new Date().toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
+
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-pro",
       systemInstruction: `Jesteś Stefan, profesjonalny asystent prawny. Twoim celem jest udzielanie precyzyjnych, rzetelnych i pomocnych informacji z zakresu prawa.
 
 KONTEKST CZASOWY:
-Dzisiejsza data to: ${new Date().toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' })}.
+Dzisiejsza data to: ${currentDate}.
 Wszelkie analizy terminów, przedawnień czy wejścia w życie przepisów muszą odnosić się do tej daty.
 
 KLUCZOWE ZASADY DZIAŁANIA:
@@ -62,6 +66,9 @@ router.post("/analyze", async (req, res) => {
       return res.status(400).json({ error: "No text provided for analysis" });
     }
 
+    // Calculate current date dynamically for each request
+    const currentDate = new Date().toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
+
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-pro",
       systemInstruction: `Jesteś Stefan, profesjonalny asystent prawny specjalizujący się w analizie umów i dokumentów prawnych.
@@ -80,7 +87,7 @@ ZASADY:
 - Bądź skrupulatny i krytyczny.
 - Cytuj fragmenty dokumentu, do których się odnosisz.
 - Używaj prostego, zrozumiałego języka, tłumacząc prawniczy żargon.
-- Pamiętaj o aktualnym stanie prawnym (Polska, ${new Date().getFullYear()}).`
+- Pamiętaj o aktualnym stanie prawnym (Polska, ${currentDate}).`
     });
 
     const result = await model.generateContent(`Przeanalizuj poniższy dokument prawny:\n\n${text}`);

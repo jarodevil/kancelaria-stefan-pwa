@@ -5,6 +5,7 @@ import Home from "@/pages/Home";
 import Chat from "@/pages/Chat";
 import Analysis from "@/pages/Analysis";
 import Templates from "@/pages/Templates";
+import Notes from "@/pages/Notes";
 import NotFound from "@/pages/NotFound";
 
 function Router() {
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/chat" component={Chat} />
       <Route path="/analysis" component={Analysis} />
       <Route path="/templates" component={Templates} />
+      <Route path="/notes" component={Notes} />
       <Route component={NotFound} />
     </Switch>
   );
