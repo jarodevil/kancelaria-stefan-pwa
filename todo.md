@@ -34,3 +34,8 @@
 - [x] Access control (email + code, max 5 users)
 - [x] PWA install link for external devices
 - [x] RSS feed for legal news updates
+
+## UI Improvements
+- [x] Redesign chat interface (compact bubbles, avatars, better colors)
+- [ ] Add export chat as PDF functionality
+- [ ] Add version history for notes

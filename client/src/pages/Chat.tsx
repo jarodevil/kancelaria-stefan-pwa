@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Loader2, Send, Trash2, Scale, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
@@ -93,7 +94,7 @@ export default function Chat() {
     <StefanLayout>
       <div className="flex flex-col h-screen">
         {/* Header */}
-        <div className="border-b p-4 flex items-center justify-between">
+        <div className="border-b p-4 flex items-center justify-between bg-card">
           <div>
             <h1 className="text-2xl font-bold">Chat z Ekspertem</h1>
             <p className="text-sm text-muted-foreground">
@@ -103,20 +104,23 @@ export default function Chat() {
           {messages.length > 0 && (
             <Button variant="outline" size="sm" onClick={handleClear}>
               <Trash2 className="w-4 h-4 mr-2" />
-              Wyczyść historię
+              Wyczyść
             </Button>
           )}
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          <div className="max-w-4xl mx-auto space-y-4">
+        <ScrollArea className="flex-1 p-4 bg-muted/20" ref={scrollRef}>
+          <div className="max-w-4xl mx-auto space-y-6">
             {messages.length === 0 && (
-              <Card className="bg-muted/50">
+              <Card className="bg-card border-2">
                 <CardHeader>
-                  <CardTitle>Witaj w Czacie z Ekspertem!</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Scale className="w-5 h-5 text-primary" />
+                    Witaj w Czacie z Ekspertem!
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-muted-foreground">
+                <CardContent className="space-y-3 text-muted-foreground">
                   <p>Jestem Stefan, Twój osobisty asystent prawny. Mogę pomóc Ci w:</p>
                   <ul className="list-disc list-inside space-y-1 ml-4">
                     <li>Wyjaśnianiu przepisów prawnych</li>
@@ -124,8 +128,8 @@ export default function Chat() {
                     <li>Udzielaniu porad w sprawach cywilnych i gospodarczych</li>
                     <li>Odpowiadaniu na pytania dotyczące prawa pracy</li>
                   </ul>
-                  <p className="text-sm pt-2">
-                    <strong>Pamiętaj:</strong> Moje odpowiedzi nie zastępują profesjonalnej porady prawnej.
+                  <p className="text-sm pt-2 font-semibold text-foreground">
+                    Pamiętaj: Moje odpowiedzi nie zastępują profesjonalnej porady prawnej.
                   </p>
                 </CardContent>
               </Card>
@@ -134,41 +138,66 @@ export default function Chat() {
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <Card
-                  className={`max-w-[80%] ${
+                {msg.role === "assistant" && (
+                  <Avatar className="w-8 h-8 mt-1 flex-shrink-0">
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      <Scale className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                
+                <div
+                  className={`max-w-[70%] rounded-2xl px-4 py-3 ${
                     msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card"
+                      ? "bg-primary/90 text-primary-foreground shadow-sm"
+                      : "bg-card border shadow-sm"
                   }`}
                 >
-                  <CardContent className="p-4">
-                    {msg.role === "assistant" ? (
+                  {msg.role === "assistant" && (
+                    <p className="text-xs font-semibold text-primary mb-2">Stefan</p>
+                  )}
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
                       <Streamdown>{msg.content}</Streamdown>
-                    ) : (
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                  )}
+                </div>
+
+                {msg.role === "user" && (
+                  <Avatar className="w-8 h-8 mt-1 flex-shrink-0">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      <User className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
               </div>
             ))}
 
             {sendMessageMutation.isPending && (
-              <div className="flex justify-start">
-                <Card className="bg-card">
-                  <CardContent className="p-4 flex items-center gap-2">
+              <div className="flex gap-3 justify-start">
+                <Avatar className="w-8 h-8 mt-1 flex-shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <Scale className="w-4 h-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="bg-card border shadow-sm rounded-2xl px-4 py-3">
+                  <p className="text-xs font-semibold text-primary mb-2">Stefan</p>
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-muted-foreground">Stefan pisze...</span>
-                  </CardContent>
-                </Card>
+                    <span className="text-sm">Piszę odpowiedź...</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </ScrollArea>
 
         {/* Input */}
-        <div className="border-t p-4">
+        <div className="border-t p-4 bg-card">
           <div className="max-w-4xl mx-auto flex gap-2">
             <Input
               placeholder="Wpisz swoje pytanie prawne..."
@@ -181,14 +210,12 @@ export default function Chat() {
             <Button
               onClick={handleSend}
               disabled={!input.trim() || sendMessageMutation.isPending}
+              size="lg"
             >
               {sendMessageMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Wyślij
-                </>
+                <Send className="w-4 h-4" />
               )}
             </Button>
           </div>
