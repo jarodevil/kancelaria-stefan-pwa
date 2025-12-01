@@ -4,11 +4,15 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 
-// Simple Gemini API integration without external dependencies
-async function callGeminiAPI(message: string, history: any[] = []) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
+// --- KONFIGURACJA ---
+// WAŻNE: Tutaj wklej swój klucz, jeśli process.env nie działa
+const API_KEY = process.env.GEMINI_API_KEY || "TU_WKLEJ_SWOJ_KLUCZ_AIza..."; 
+const MODEL_NAME = "gemini-1.5-pro"; // Zmieniono na model stabilny, lepszy do prawa
+
+async function callGeminiAPI(message: string, history: any[] = [], isAnalysis: boolean = false) {
+  if (!API_KEY || API_KEY.includes("TU_WKLEJ")) {
+    console.error("BRAK KLUCZA API! Uzupełnij go w pliku server/routers.ts");
+    // Aby nie wywalić aplikacji, rzucamy błąd w konsolę, ale próbujemy działać dalej jeśli env jest ustawiony
   }
 
   const currentDate = new Date().toLocaleDateString("pl-PL", {
@@ -17,50 +21,70 @@ async function callGeminiAPI(message: string, history: any[] = []) {
     day: "numeric",
   });
 
-  const systemPrompt = `Jesteś Stefan, Starszy Partner w polskiej kancelarii prawnej KancelariAI. Dzisiejsza data: ${currentDate}.
-
+  // 1. Definicja Systemowa (Mózg Stefana)
+  let systemInstructionText = "";
+  if (isAnalysis) {
+    systemInstructionText = `Jesteś Stefan, audytor prawny. Data: ${currentDate}.
+CEL: Bezwzględna weryfikacja dokumentu pod kątem ryzyk.
 ZASADY:
-1. Podawaj źródła prawne (np. "art. 353¹ Kodeksu cywilnego")
-2. Używaj TYLKO polskiego prawa obowiązującego w ${new Date().getFullYear()} roku
-3. Na końcu KAŻDEJ odpowiedzi dodaj: "⚠️ Analiza nie stanowi porady prawnej. W sprawach wymagających większej opinii skonsultuj się z uprawnionym doradcą."
+- Zero inwencji twórczej. Opieraj się TYLKO na dostarczonym tekście.
+- Jeśli dokument nie ma daty/podpisu -> zgłoś to jako błąd.
+- Ryzyka oznaczaj ikoną ⚠️.`;
+  } else {
+    systemInstructionText = `Jesteś Stefan, Starszy Partner w kancelarii. Data: ${currentDate}.
+CEL: Udzielanie precyzyjnych informacji o polskim prawie.
+ZASADY KRYTYCZNE:
+1. Temperatura 0.0 - Zakaz wymyślania przepisów.
+2. Jeśli nie znasz treści artykułu, napisz "Należy zweryfikować w ustawie". Nie cytuj z pamięci.
+3. Odpowiedzi muszą być zgodne ze stanem prawnym na rok ${new Date().getFullYear()}.
+4. Zawsze dodaj: "⚠️ To nie jest porada prawna."`;
+  }
 
-Odpowiadaj po polsku, zwięźle i merytorycznie.`;
-
-  const contents = [
-    {
-      role: "user",
-      parts: [{ text: systemPrompt }],
+  // 2. Budowa zapytania do Google
+  const requestBody = {
+    contents: [
+      ...history.map((msg: any) => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.content }],
+      })),
+      {
+        role: "user",
+        parts: [{ text: message }],
+      }
+    ],
+    // To pole jest kluczowe dla posłuszeństwa modelu
+    systemInstruction: {
+      parts: [{ text: systemInstructionText }]
     },
-    {
-      role: "model",
-      parts: [{ text: "Rozumiem. Jestem gotowy do udzielania rzetelnych porad prawnych." }],
-    },
-    ...history.map((msg: any) => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: msg.content }],
-    })),
-    {
-      role: "user",
-      parts: [{ text: message }],
-    },
-  ];
+    // To pole jest kluczowe dla wyłączenia halucynacji
+    generationConfig: {
+      temperature: 0.0,
+      maxOutputTokens: 8192,
+      topP: 0.95
+    }
+  };
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents }),
+      body: JSON.stringify(requestBody),
     }
   );
 
   if (!response.ok) {
     const error = await response.text();
     console.error("[Gemini API Error]", error);
-    throw new Error("Failed to get AI response");
+    throw new Error(`Błąd API Gemini: ${response.statusText}`);
   }
 
   const data = await response.json();
+  
+  if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+    throw new Error("Pusta odpowiedź od AI (możliwa blokada treści)");
+  }
+
   return data.candidates[0].content.parts[0].text;
 }
 
@@ -71,9 +95,7 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      return { success: true } as const;
     }),
   }),
 
@@ -88,18 +110,24 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
-          const response = await callGeminiAPI(input.message, input.history || []);
+          // Mapowanie ról dla funkcji pomocniczej
+          const cleanHistory = (input.history || []).map(h => ({
+            role: h.role, // Funkcja callGeminiAPI obsłuży mapowanie user/model
+            content: h.content
+          }));
+
+          const response = await callGeminiAPI(input.message, cleanHistory, false);
           return {
             success: true,
             message: response,
-            model: "gemini-2.0-flash-exp",
+            model: MODEL_NAME,
           };
         } catch (error: any) {
           console.error("[Chat Error]", error);
           return {
             success: false,
-            message: "Przepraszam, wystąpił problem z połączeniem. Spróbuj ponownie za chwilę.",
-            model: "fallback",
+            message: "Przepraszam, wystąpił problem z połączeniem. Spróbuj ponownie.",
+            model: "error",
           };
         }
       }),
@@ -113,39 +141,23 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         try {
-          const currentDate = new Date().toLocaleDateString("pl-PL", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-
-          const prompt = `Jesteś ekspertem prawnym. Dzisiejsza data: ${currentDate}.
-
-ZADANIE: Przeanalizuj poniższy dokument prawny i wskaż:
-1. **Typ dokumentu**
-2. **Potencjalne ryzyka**
-3. **Rekomendacje**
-
-DOKUMENT:
-${input.content}
-
-ANALIZA:`;
-
-          const analysis = await callGeminiAPI(prompt, []);
+          const prompt = `DOKUMENT DO ANALIZY:\n${input.content}`;
+          // Przekazujemy true jako trzeci parametr -> tryb analizy
+          const analysis = await callGeminiAPI(prompt, [], true);
           
           return {
             success: true,
             analysis,
             sources: [],
-            model: "gemini-2.0-flash-exp",
+            model: MODEL_NAME,
           };
         } catch (error: any) {
           console.error("[Analysis Error]", error);
           return {
             success: false,
-            analysis: "Nie udało się przeanalizować dokumentu. Spróbuj ponownie.",
+            analysis: "Nie udało się przeanalizować dokumentu. Sprawdź logi.",
             sources: [],
-            model: "fallback",
+            model: "error",
           };
         }
       }),
