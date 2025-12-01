@@ -6,7 +6,7 @@ import { z } from "zod";
 
 // --- KONFIGURACJA ---
 // WAŻNE: Tutaj wklej swój klucz, jeśli process.env nie działa
-const API_KEY = process.env.GEMINI_API_KEY || "TU_WKLEJ_SWOJ_KLUCZ_AIza..."; 
+const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyCHoAefaJI2U-zsaPcxS2TO6T-sIlVENGE"; 
 const MODEL_NAME = "gemini-1.5-pro"; // Zmieniono na model stabilny, lepszy do prawa
 
 async function callGeminiAPI(message: string, history: any[] = [], isAnalysis: boolean = false) {
@@ -59,7 +59,7 @@ ZASADY KRYTYCZNE:
     // To pole jest kluczowe dla wyłączenia halucynacji
     generationConfig: {
       temperature: 0.0,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 3000,
       topP: 0.95
     }
   };
