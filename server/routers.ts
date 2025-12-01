@@ -8,7 +8,7 @@ import { z } from "zod";
 
 // 1. Wklej tutaj swój klucz API z Google AI Studio zamiast "TU_WKLEJ_SWOJ_KLUCZ_API"
 // Jeśli wolisz zmienne środowiskowe, zostaw process.env... ale upewnij się, że są ustawione.
-const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyCHoAefaJI2U-zsaPcxS2TO6T-sIlVENGE"; 
+const API_KEY = process.env.GEMINI_API_KEY;
 
 // 2. Wybór modelu - do prawa polecam 1.5-pro (dokładniejszy) zamiast 2.0-flash (zbyt szybki/kreatywny)
 const MODEL_NAME = "gemini-1.5-pro"; 
